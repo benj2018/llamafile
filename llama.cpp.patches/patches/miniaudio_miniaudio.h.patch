@@ -1,5 +1,4 @@
 diff --git a/miniaudio/miniaudio.h b/miniaudio/miniaudio.h
-index f40cf03f..00000000 100644
 --- a/llama.cpp/miniaudio/miniaudio.h
 +++ b/llama.cpp/miniaudio/miniaudio.h
 @@ -3858,7 +3858,7 @@
