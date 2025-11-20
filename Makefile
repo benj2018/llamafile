@@ -110,6 +110,8 @@ setup: # Initialize and configure all dependencies (submodules, patches, etc.)
 		echo "Initializing llama.cpp submodule..."; \
 		git submodule update --init llama.cpp; \
 	fi
+	@echo "Initializing llama.cpp dependencies (nested submodules)..."
+	@cd llama.cpp && git submodule update --init
 	@echo "Applying llama.cpp patches..."
 	@export TMPDIR=$$(pwd)/o/tmp && ./llama.cpp.patches/apply-patches.sh
 	@echo "Setup complete!"
