@@ -1,0 +1,19 @@
+diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
+index fe290bf8..05384093 100644
+--- a/common/CMakeLists.txt
++++ b/common/CMakeLists.txt
+@@ -97,14 +97,11 @@ if (LLAMA_OPENSSL)
+         set(SAVED_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+         set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+         check_c_source_compiles("
+-        #include <openssl/opensslv.h>
+         #if defined(OPENSSL_IS_BORINGSSL) || defined(LIBRESSL_VERSION_NUMBER)
+         #    if OPENSSL_VERSION_NUMBER < 0x1010107f
+-        #        error bad version
+         #    endif
+         #else
+         #    if OPENSSL_VERSION_NUMBER < 0x30000000L
+-        #        error bad version
+         #    endif
+         #endif
+         int main() { return 0; }

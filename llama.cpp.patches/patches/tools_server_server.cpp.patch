@@ -1,0 +1,348 @@
+diff --git a/tools/server/server.cpp b/tools/server/server.cpp
+index f5089bef..b121c9fb 100644
+--- a/tools/server/server.cpp
++++ b/tools/server/server.cpp
+@@ -30,6 +30,31 @@
+ #include <unordered_map>
+ #include <unordered_set>
+ 
++// mmojo-server START
++// This could be automated by searching for "using json =" and inserting this block before.
++// pre C++20 helpers.
++bool starts_with (std::string const &fullString, std::string const &beginning);
++bool ends_with (std::string const &fullString, std::string const &ending);
++
++bool starts_with (std::string const &fullString, std::string const &beginning) {
++    if (fullString.length() >= beginning.length()) {
++        return (0 == fullString.compare (0, beginning.length(), beginning));
++    }
++    else {
++        return false;
++    } 
++}
++
++bool ends_with (std::string const &fullString, std::string const &ending) {
++    if (fullString.length() >= ending.length()) {
++        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
++    }
++    else {
++        return false;
++    } 
++}
++// mmojo-server END
++
+ using json = nlohmann::ordered_json;
+ 
+ constexpr int HTTP_POLLING_SECONDS = 1;
+@@ -2074,7 +2099,7 @@ struct server_queue {
+     }
+ 
+     // Add a new task, but defer until one slot is available
+-    void defer(server_task && task) {
++    void defer_task(server_task && task) {
+         std::unique_lock<std::mutex> lock(mutex_tasks);
+         QUE_DBG("defer task, id = %d\n", task.id);
+         queue_tasks_deferred.push_back(std::move(task));
+@@ -3350,14 +3375,14 @@ struct server_context {
+                     if (slot == nullptr) {
+                         // if no slot is available, we defer this task for processing later
+                         SRV_DBG("no slot is available, defer task, id_task = %d\n", task.id);
+-                        queue_tasks.defer(std::move(task));
++                        queue_tasks.defer_task(std::move(task));
+                         break;
+                     }
+ 
+                     if (slot->is_processing()) {
+                         // if requested slot is unavailable, we defer this task for processing later
+                         SRV_DBG("requested slot is unavailable, defer task, id_task = %d\n", task.id);
+-                        queue_tasks.defer(std::move(task));
++                        queue_tasks.defer_task(std::move(task));
+                         break;
+                     }
+ 
+@@ -3443,7 +3468,7 @@ struct server_context {
+                     if (slot->is_processing()) {
+                         // if requested slot is unavailable, we defer this task for processing later
+                         SRV_DBG("requested slot is unavailable, defer task, id_task = %d\n", task.id);
+-                        queue_tasks.defer(std::move(task));
++                        queue_tasks.defer_task(std::move(task));
+                         break;
+                     }
+ 
+@@ -3481,7 +3506,7 @@ struct server_context {
+                     if (slot->is_processing()) {
+                         // if requested slot is unavailable, we defer this task for processing later
+                         SRV_DBG("requested slot is unavailable, defer task, id_task = %d\n", task.id);
+-                        queue_tasks.defer(std::move(task));
++                        queue_tasks.defer_task(std::move(task));
+                         break;
+                     }
+ 
+@@ -3530,7 +3555,7 @@ struct server_context {
+                     if (slot->is_processing()) {
+                         // if requested slot is unavailable, we defer this task for processing later
+                         SRV_DBG("requested slot is unavailable, defer task, id_task = %d\n", task.id);
+-                        queue_tasks.defer(std::move(task));
++                        queue_tasks.defer_task(std::move(task));
+                         break;
+                     }
+ 
+@@ -4223,6 +4248,16 @@ struct server_context {
+                 if (slot.state == SLOT_STATE_PROCESSING_PROMPT || slot.state == SLOT_STATE_DONE_PROMPT) {
+                     if (slot.task->params.stream && slot.task->params.return_progress) {
+                         send_partial_response(slot, {}, true);
++
++                        // mmojo-server START
++                        // This could be automated by searching for "send_partial_response(slot, {}, true);" and inserting this block after. -Brad 2025-11-05
++                        // This looks like the right spot to sleep.
++                        if (params_base.n_batch_sleep_ms > 0) {
++                            SLT_INF(slot, "Starting sleep %d ms after batch.\n", params_base.n_batch_sleep_ms);
++                            std::this_thread::sleep_for(std::chrono::milliseconds(params_base.n_batch_sleep_ms));
++                            SLT_INF(slot, "%s", "Finished sleep after batch.\n");
++                        }
++                        // mmojo-server END                                            
+                     }
+                 }
+ 
+@@ -4399,16 +4434,56 @@ struct server_context {
+         SRV_DBG("%s", "run slots completed\n");
+     }
+ 
++    // mmojo-server START
++    // This could be automated by searching for "json model_meta() const {" and replacing 10 lines with this block. -Brad 2025-11-05
+     json model_meta() const {
++        char general_architecture[64];
++        char general_type[64];
++        char general_name[64];
++        char general_version[64];
++        char general_finetune[64];
++        char general_basename[64];
++        char general_size_label[64];
++        char general_license[64];
++
++        general_architecture[0] = 0;
++        general_type[0] = 0;
++        general_name[0] = 0;
++        general_version[0] = 0;
++        general_finetune[0] = 0;
++        general_basename[0] = 0;
++        general_size_label[0] = 0;
++        general_license[0] = 0;
++
++        llama_model_meta_val_str(model, "general.architecture", general_architecture, 64);
++        llama_model_meta_val_str(model, "general.type", general_type, 64);
++        llama_model_meta_val_str(model, "general.name", general_name, 64);
++        llama_model_meta_val_str(model, "general.version",      general_version, 64);
++        llama_model_meta_val_str(model, "general.finetune",     general_finetune, 64);
++        llama_model_meta_val_str(model, "general.basename",     general_basename, 64);
++        llama_model_meta_val_str(model, "general.size_label",   general_size_label, 64);
++        llama_model_meta_val_str(model, "general.license",      general_license, 64);
++
+         return json {
+-            {"vocab_type",  llama_vocab_type       (vocab)},
+-            {"n_vocab",     llama_vocab_n_tokens   (vocab)},
+-            {"n_ctx_train", llama_model_n_ctx_train(model)},
+-            {"n_embd",      llama_model_n_embd     (model)},
+-            {"n_params",    llama_model_n_params   (model)},
+-            {"size",        llama_model_size       (model)},
++            {"vocab_type",  llama_vocab_type            (vocab)},
++            {"n_vocab",     llama_vocab_n_tokens        (vocab)},
++            {"n_ctx_train", llama_model_n_ctx_train     (model)},
++            {"n_ctx",       llama_n_ctx                 (ctx)},
++            {"n_embd",      llama_model_n_embd          (model)},
++            {"n_params",    llama_model_n_params        (model)},
++            {"size",        llama_model_size            (model)},
++            {"general.architecture", general_architecture },
++            {"general.type", general_type },
++            {"general.name", general_name },
++            {"general.version", general_version },
++            {"general.finetune", general_finetune },
++            {"general.basename", general_basename },
++            {"general.size_label", general_size_label },
++            {"general.license", general_license },
+         };
+     }
++    // mmojo-server END
++
+ };
+ 
+ static void log_server_request(const httplib::Request & req, const httplib::Response & res) {
+@@ -4440,6 +4515,89 @@ inline void signal_handler(int signal) {
+ }
+ 
+ int main(int argc, char ** argv) {
++    // mmojo-server START
++    // This could be automated by looking for "int main(" and inserting this block immediately after. -Brad 2025-11-05
++
++    // Keep the build from showing up as ape in the process list.
++    pthread_setname_np(pthread_self(), "llamafile");
++
++    // This implements an args file feature inspired by llamafile's.
++    // Path parameters passed on command line or in args files are relative to the working directory.
++
++    char pathChar[PATH_MAX];
++    pathChar[0] = '\0';
++
++    if (getcwd(pathChar, sizeof(pathChar) - 1)) {
++        strcat(pathChar, "/");
++    }
++
++    // Args files if present. The names are different to remove confusion during packaging.
++    const std::string& argsFilename = "mmojo-server-args";
++    const std::string& supportDirectoryName = "mmojo-server-support";
++    const std::string& supportArgsFilename = "default-args";
++    const std::string& zipArgsPath = "/zip/default-args";
++
++    std::string path = pathChar;
++    std::string argsPath = path + argsFilename;
++    std::string supportPath = path + supportDirectoryName + "/";
++    std::string supportArgsPath = supportPath + supportArgsFilename;
++
++    #if 1
++    printf("Paths of things we care about:\n");
++    printf("-            path: %s\n", path.c_str());
++    printf("-        argsPath: %s\n", argsPath.c_str());
++    printf("-     supportPath: %s\n", supportPath.c_str());
++    printf("- supportArgsPath: %s\n", supportArgsPath.c_str());
++    printf("-     zipArgsPath: %s\n", zipArgsPath.c_str());
++
++    struct stat buffer1;
++    if (stat(path.c_str(), &buffer1) == 0) {
++        printf("-            path exists: %s\n", path.c_str());
++    }
++    if (stat(argsPath.c_str(), &buffer1) == 0) {
++        printf("-        argsPath exists: %s\n", argsPath.c_str());
++    }
++    if (stat(supportArgsPath.c_str(), &buffer1) == 0) {
++        printf("- supportArgsPath exists: %s\n", supportArgsPath.c_str());
++    }
++    if (stat(zipArgsPath.c_str(), &buffer1) == 0) {
++        printf("-     zipArgsPath exists: %s\n", zipArgsPath.c_str());
++    }
++    #endif
++    
++    // mmojo-server-support/default-args will be an option for platform optimized builds.
++    // const std::string& supportArgsFilename = "mmojo-server-support/default-args";
++    struct stat buffer;
++
++    // At this point, argc, argv represent:
++    //     command (User supplied args)
++
++    if (stat (argsPath.c_str(), &buffer) == 0) {
++        argc = cosmo_args(argsPath.c_str(), &argv);
++    }
++
++    // At this point, argc, argv represent:
++    //     command (argsPath args) (User supplied args)
++
++    if (stat (supportArgsPath.c_str(), &buffer) == 0) {
++        argc = cosmo_args(supportArgsPath.c_str(), &argv);
++    }
++
++    // At this point, argc, argv represent:
++    //     command (supportArgsPath args) (argsPath args) (User supplied args)
++
++    #ifdef COSMOCC
++    if (stat (zipArgsPath.c_str(), &buffer) == 0) {
++        argc = cosmo_args(zipArgsPath.c_str(), &argv);
++    }
++
++    // At this point, argc, argv represent:
++    //     command (zipArgsPath args) (supportArgsPath args) (argsPath args) (User supplied args)
++    #endif
++    
++    // Yep, this is counterintuitive, but how the cosmo_args command works.
++    // mmojo-server END
++
+     // own arguments required by this example
+     common_params params;
+ 
+@@ -4458,6 +4616,35 @@ int main(int argc, char ** argv) {
+         params.kv_unified = true;
+     }
+ 
++    // mmojo-server START
++    // This could be automated by looking for "common_init();" and inserting this block immediately after. -Brad 2025-11-05
++    // fix params -- model, path, ssl-key-file, ssl-cert-file
++    // if they are relative paths, fix to absolute relative to working directory
++    if (supportPath != "") {
++        const std::string& mmojoRootPath = "/mmojo/";
++        if (starts_with(params.model.path, mmojoRootPath)) {
++            printf("--model path starts with %s.\n",  mmojoRootPath.c_str());
++            std::string s = params.model.path.replace(0, mmojoRootPath.length(), supportPath);
++            printf("  - new model path: %s\n", s.c_str());
++        }
++        if (starts_with(params.public_path, mmojoRootPath)) {
++            printf("--path path starts with %s.\n",  mmojoRootPath.c_str());
++            std::string s = params.public_path.replace(0, mmojoRootPath.length(), supportPath);
++            printf("  - new path path: %s\n", s.c_str());
++        }
++        if (starts_with(params.ssl_file_key, mmojoRootPath)) {
++            printf("--ssl-key-file path starts with %s.\n",  mmojoRootPath.c_str());
++            std::string s = params.ssl_file_key.replace(0, mmojoRootPath.length(), supportPath);
++            printf("  - new ssl-key-file path: %s\n", s.c_str());
++        }
++        if (starts_with(params.ssl_file_cert, mmojoRootPath)) {
++            printf("--ssl-cert-file path starts with %s.\n",  mmojoRootPath.c_str());
++            std::string s = params.ssl_file_cert.replace(0, mmojoRootPath.length(), supportPath);
++            printf("  - new ssl-cert-file path: %s\n", s.c_str());
++        }
++    }
++    // mmojo-server END
++
+     common_init();
+ 
+     // struct that contains llama context and inference
+@@ -4597,8 +4784,8 @@ int main(int argc, char ** argv) {
+         server_state current_state = state.load();
+         if (current_state == SERVER_STATE_LOADING_MODEL) {
+             auto tmp = string_split<std::string>(req.path, '.');
+-            if (req.path == "/" || tmp.back() == "html") {
+-                res.set_content(reinterpret_cast<const char*>(loading_html), loading_html_len, "text/html; charset=utf-8");
++	    if (req.path == "/" || tmp.back() == "html" || ends_with(req.path, "/") || ends_with(req.path, ".html")) {
++	        res.set_content(reinterpret_cast<const char*>(loading_html), loading_html_len, "text/html; charset=utf-8");
+                 res.status = 503;
+             } else if (req.path == "/models" || req.path == "/v1/models" || req.path == "/api/tags") {
+                 // allow the models endpoint to be accessed during loading
+@@ -5620,6 +5807,41 @@ int main(int argc, char ** argv) {
+             });
+         }
+     }
++    
++    // mmojo-server START
++    // This can be automated by searching for "register API routes" and inserting this block before. -Brad 2025-11-05
++    // LOG_INF("%s%s\n", "default_ui_endpoint: ", params.default_ui_endpoint.c_str());
++
++    if (params.default_ui_endpoint != "") {
++        std::string endpoint = params.default_ui_endpoint;
++        if (!starts_with(endpoint, "/")) {
++            endpoint = "/" + endpoint;
++        }
++        while (ends_with(endpoint, "/")) {
++            endpoint = endpoint.substr(0, endpoint.length() - 1);
++        }
++
++        // LOG_INF("-- %s%s\n", "endpoint: ", endpoint.c_str());
++        
++        svr->Get(endpoint, [](const httplib::Request & req, httplib::Response & res) {
++            if (req.get_header_value("Accept-Encoding").find("gzip") == std::string::npos) {
++                res.set_content("Error: gzip is not supported by this browser", "text/plain");
++            } else {
++                res.set_header("Content-Encoding", "gzip");
++                // COEP and COOP headers, required by pyodide (python interpreter)
++                res.set_header("Cross-Origin-Embedder-Policy", "require-corp");
++                res.set_header("Cross-Origin-Opener-Policy", "same-origin");
++                res.set_content(reinterpret_cast<const char*>(index_html_gz), index_html_gz_len, "text/html; charset=utf-8");
++            }
++            return false;
++        });
++
++        svr->Get(endpoint + "/", [](const httplib::Request & req, httplib::Response & res) {
++            res.set_redirect(req.path.substr(0, req.path.length() - 1));
++            return false;
++        });        
++    }
++    // mmojo-server END        
+ 
+     // register API routes
+     svr->Get (params.api_prefix + "/health",              handle_health); // public endpoint (no API key check)

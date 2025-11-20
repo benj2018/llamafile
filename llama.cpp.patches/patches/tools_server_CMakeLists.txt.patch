@@ -1,0 +1,10 @@
+diff --git a/tools/server/CMakeLists.txt b/tools/server/CMakeLists.txt
+index 06df3ee4..356f2872 100644
+--- a/tools/server/CMakeLists.txt
++++ b/tools/server/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-set(TARGET llama-server)
++set(TARGET llamafile)
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+ 
