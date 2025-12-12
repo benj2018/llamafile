@@ -25,6 +25,29 @@ o/$(MODE)/%.o: %.cpp $(COSMOCC)
 	@mkdir -p $(@D)
 	$(COMPILE.cc) -o $@ $<
 
+# ==============================================================================
+# Extension-preserving compilation rules
+# ==============================================================================
+# These rules produce foo.c.o from foo.c (instead of foo.o).
+# Required when both foo.c and foo.cpp exist in the same directory,
+# otherwise both would produce foo.o and collide.
+# Example: ggml/src/ggml.c and ggml/src/ggml.cpp both exist in llama.cpp.
+o/$(MODE)/%.c.o: %.c $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.c) -o $@ $<
+
+o/$(MODE)/%.cpp.o: %.cpp $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.cc) -o $@ $<
+
+o/$(MODE)/%.c.o: o/$(MODE)/%.c $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.c) -o $@ $<
+
+o/$(MODE)/%.cpp.o: o/$(MODE)/%.cpp $(COSMOCC)
+	@mkdir -p $(@D)
+	$(COMPILE.cc) -o $@ $<
+
 o/$(MODE)/%.c: %.gperf
 	@mkdir -p $(@D)
 	build/gperf --output-file=$@ $<

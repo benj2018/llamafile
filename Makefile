@@ -114,11 +114,6 @@ setup: # Initialize and configure all dependencies (submodules, patches, etc.)
 	@cd llama.cpp && git submodule update --init
 	@echo "Applying llama.cpp patches..."
 	@export TMPDIR=$$(pwd)/o/tmp && ./llama.cpp.patches/apply-patches.sh
-	@echo "Downloading dependencies..."
-	@cd llama.cpp && git clone https://github.com/nlohmann/json.git nlohmann-json
-	@cd llama.cpp && git clone https://github.com/google/minja.git google-minja
-	@cd llama.cpp && git clone https://github.com/yhirose/cpp-httplib.git cpp-httplib
-	@cd llama.cpp && git clone https://github.com/nothings/stb.git stb
 	@echo "Setup complete!"
 
 ifneq ($(MAKECMDGOALS),setup)

@@ -1,9 +1,9 @@
-diff --git a/miniaudio/miniaudio.h b/miniaudio/miniaudio.h
---- a/llama.cpp/miniaudio/miniaudio.h
-+++ b/llama.cpp/miniaudio/miniaudio.h
-@@ -3858,7 +3858,7 @@
-
-
+diff --git a/vendor/miniaudio/miniaudio.h b/vendor/miniaudio/miniaudio.h
+--- a/llama.cpp/vendor/miniaudio/miniaudio.h
++++ b/llama.cpp/vendor/miniaudio/miniaudio.h
+@@ -3858,7 +3858,7 @@ typedef ma_uint16 wchar_t;
+ 
+ 
  /* Platform/backend detection. */
 -#if defined(_WIN32) || defined(__COSMOPOLITAN__)
 +#if defined(_WIN32)
