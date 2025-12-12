@@ -106,13 +106,6 @@ int main(int argc, char **argv) {
     // Check if verbose mode is requested
     bool verbose = llamafile_has(argv, "--verbose");
 
-    //// Suppress llama.cpp logging during backend init
-    //// Note: common_init() will overwrite this, so we set it again after
-    //if (!verbose) {
-    //    llama_log_set(llama_log_callback_null, NULL);
-    //    FLAG_log_disable = true;
-    //}
-
     // Initialize params with defaults
     g_params = &s_params;
     g_params->sampling.n_prev = 64;
