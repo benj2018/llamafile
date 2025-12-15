@@ -19,8 +19,10 @@
 
 #include <cosmo.h>
 #include <cstdio>
+#include <cstdlib>
 #include <signal.h>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #include "arg.h"
@@ -103,8 +105,9 @@ int main(int argc, char **argv) {
     // print logo
     logo(argv);
 
-    // Check if verbose mode is requested
+    // Check if verbose mode is requested (must be set before Metal init)
     bool verbose = llamafile_has(argv, "--verbose");
+    FLAG_verbose = verbose ? 1 : 0;
 
     // Initialize params with defaults
     g_params = &s_params;
@@ -113,11 +116,23 @@ int main(int argc, char **argv) {
     g_params->sampling.temp = 0;  // don't use randomness by default
     g_params->prompt = DEFAULT_SYSTEM_PROMPT;
 
+    // Initialize GPU support (must happen BEFORE llama_backend_init())
+    // This triggers dynamic compilation and loading of GPU backends
+    if (verbose)
+        print_ephemeral("initializing gpu...");
+    llamafile_has_metal();  // triggers Metal backend registration on macOS ARM64
+    if (verbose)
+        clear_ephemeral();
+
     // parse flags
     print_ephemeral("loading backend...");
     llama_backend_init();
     common_init();
 
+    // NOTE that we are currently using llama.cpp flags parser here, so
+    // either we create a new kind of example for a custom set of flags
+    // or we need to deal with them separately and remove them prior to
+    // this step (see removeArgs in main.cpp)
     if (!common_params_parse(argc, argv, *g_params, LLAMA_EXAMPLE_MAIN)) {
         fprintf(stderr, "error: failed to parse flags\n");
         exit(1);
@@ -194,6 +209,16 @@ int main(int argc, char **argv) {
 
     // Run the REPL
     repl();
+
+    // Skip cleanup to avoid Metal backend crash on exit
+    if (g_interrupted_exit) {
+        _exit(0);
+    }
+
+    // Synchronize before cleanup to ensure all GPU operations complete
+    if (g_ctx) {
+        llama_synchronize(g_ctx);
+    }
 
     // Cleanup
     if (g_mtmd) {
