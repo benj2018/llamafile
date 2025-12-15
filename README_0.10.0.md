@@ -11,10 +11,10 @@ with cosmopolitan. It is based on llama.cpp commit dbc15a79672e72e0b9c1832adddf3
 (Dec, 6, 2025).
 
 Run `make setup` to pull from the git submodules and apply the required patches.
-Then, run the following to build the llama-server APE:
+Then, run the following to build the llamafile APE:
 
 ```
-make -j8 o//llamafile_new/llamafile
+make -j8
 ```
 
 > [!NOTE]
@@ -29,19 +29,19 @@ make -j8 o//llamafile_new/llamafile
 > You can then either add the cosmocc binaries dir to your path or directly run:
 >
 > ```
-> .cosmocc/4.0.2/bin/make -j8 o//llamafile_new/llamafile
+> .cosmocc/4.0.2/bin/make -j8
 > ```
 
 You can then run the llamafile TUI as
 
 ```
-./o/llamafile_new/llamafile --model <gguf_model>
+./o/llamafile/llamafile --model <gguf_model>
 ```
 
 or the llama.cpp server as
 
 ```
-./o/llamafile_new/llamafile --model <gguf_model> --server
+./o/llamafile/llamafile --model <gguf_model> --server
 ```
 
 > [!NOTE]
@@ -56,6 +56,9 @@ or the llama.cpp server as
 20251215
 - added TUI support: you can now directly chat with the chosen LLM from
 the terminal, or run the llama.cpp server using the `--server` parameter
+- simplified build by removing all tools/deps except those required by
+the new llamafile code (they will be added back in as soon as we reintroduce
+functionalities)
 
 20251209
 - added BUILD.mk so we can do without cmake
